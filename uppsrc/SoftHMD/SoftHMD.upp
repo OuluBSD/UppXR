@@ -1,0 +1,64 @@
+description "\3770,0,128";
+
+noblitz;
+
+uses
+	Geometry,
+	ComputerVision,
+	Draw/Camera;
+
+pkg_config(LINUX USBONLY) "hidapi-libusb libusb-1.0";
+
+pkg_config(LINUX) "hidapi-hidraw libusb-1.0";
+
+library(FREEBSD) hidapi;
+
+file
+	README.md,
+	Copying,
+	SoftHMD.h,
+	SoftHMD.cpp,
+	Daemon.h,
+	Daemon.cpp,
+	System.h,
+	System.cpp,
+	Public.h,
+	Internal.h,
+	Internal.cpp,
+	Hid.h,
+	Platform.h,
+	PlatformPosix.cpp,
+	PlatformWin32.cpp,
+	Shaders.h,
+	Shaders.cpp,
+	Utils.h,
+	Log.h,
+	Fusion.h,
+	Fusion.cpp,
+	ConfigKey.h,
+	Dummy.cpp,
+	Wmr.h,
+	Wmr.cpp,
+	WmrPacket.cpp,
+	WmrController.cpp,
+	Oculus.h,
+	Oculus.cpp,
+	Psvr.h,
+	Psvr.cpp,
+	PsvrPacket.cpp,
+	Android.h,
+	Android.cpp,
+	Camera.h,
+	Camera.cpp,
+	SoftHMD.icpp,
+	Tracking.h,
+	Tracking.cpp,
+	TrackingImpl.h,
+	TrackingImpl.cpp,
+	Math.h,
+	Math.cpp,
+	Miniz.h,
+	Miniz.c,
+	NxJson.h,
+	NxJson.c,
+	_ readonly separator;

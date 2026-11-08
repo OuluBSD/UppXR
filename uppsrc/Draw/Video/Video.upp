@@ -1,0 +1,14 @@
+file
+	AGENTS.md,
+	Video.h,
+	VideoTypes.h,
+	VideoBackend.h,
+	VideoEffects.h,
+	DeviceManager.h;
+
+uses
+	Core,
+	Draw,
+	plugin/jpg;
+
+uses(POSIX) plugin/libv4l2;

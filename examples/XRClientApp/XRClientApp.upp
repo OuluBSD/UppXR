@@ -1,0 +1,12 @@
+description "XRClient calibration application";
+
+uses
+	XRClient;
+
+file
+	AGENTS.md,
+	main.cpp;
+
+mainconfig
+	"" = "GUI",
+	"X11" = "GUI NOGTK";

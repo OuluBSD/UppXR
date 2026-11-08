@@ -1,0 +1,272 @@
+#include "SoftHMD.h"
+
+#include <Draw/Camera/Camera.h>
+
+NAMESPACE_UPP
+
+namespace {
+
+class HmdStereoSource : public StereoSource {
+public:
+	typedef HmdStereoSource CLASSNAME;
+	bool running = false;
+	bool verbose = false;
+	HMD::System sys;
+	One<HMD::Camera> cam;
+	Image last_left;
+	Image last_right;
+	bool last_is_bright = false;
+	int64 last_serial = -1;
+
+	Upp::Thread background_thread;
+	std::atomic<bool> quit;
+	Upp::Mutex mutex;
+	Image bg_left_bright, bg_right_bright;
+	Image bg_left_dark, bg_right_dark;
+	int64 bg_serial_bright = -1;
+	int64 bg_serial_dark = -1;
+
+	String GetName() const override { return "HMD Stereo Camera"; }
+
+	bool Start() override {
+		if (running)
+			return true;
+		if (!sys.Initialise())
+			return false;
+		cam.Create();
+		if (cam.IsEmpty() || !cam->Open()) {
+			cam.Clear();
+			sys.Uninitialise();
+			return false;
+		}
+		cam->SetVerbose(verbose);
+		quit = false;
+		background_thread.Start(THISBACK(BackgroundProcess));
+		running = true;
+		return true;
+	}
+
+	void Stop() override {
+		if (running) {
+			quit = true;
+			background_thread.Wait();
+		}
+		if (cam)
+			cam->Close();
+		cam.Clear();
+		if (running)
+			sys.Uninitialise();
+		running = false;
+		last_left = Image();
+		last_right = Image();
+		{
+			Mutex::Lock __(mutex);
+			bg_left_bright = Image();
+			bg_right_bright = Image();
+			bg_left_dark = Image();
+			bg_right_dark = Image();
+			bg_serial_bright = -1;
+			bg_serial_dark = -1;
+		}
+	}
+
+	bool IsRunning() const override { return running; }
+
+	bool ReadFrame(CameraFrame& left, CameraFrame& right, bool prefer_bright = false) override {
+		if (!running)
+			return false;
+
+		Image L, R;
+		bool is_bright = false;
+		int64 serial = -1;
+
+		{
+			Mutex::Lock __(mutex);
+
+			bool has_new_bright = (bg_serial_bright > last_serial);
+			bool has_new_dark = (bg_serial_dark > last_serial);
+
+			if (prefer_bright) {
+				if (has_new_bright) {
+					L = bg_left_bright; R = bg_right_bright;
+					is_bright = true; serial = bg_serial_bright;
+				} else if (has_new_dark) {
+					L = bg_left_dark; R = bg_right_dark;
+					is_bright = false; serial = bg_serial_dark;
+				} else return false;
+			} else {
+				if (bg_serial_bright > bg_serial_dark) {
+					if (has_new_bright) {
+						L = bg_left_bright; R = bg_right_bright;
+						is_bright = true; serial = bg_serial_bright;
+					} else return false;
+				} else {
+					if (has_new_dark) {
+						L = bg_left_dark; R = bg_right_dark;
+						is_bright = false; serial = bg_serial_dark;
+					} else return false;
+				}
+			}
+
+			last_left = L;
+			last_right = R;
+			last_is_bright = is_bright;
+			last_serial = serial;
+		}
+
+		FillFrame(left, last_left, last_is_bright, last_serial);
+		FillFrame(right, last_right, last_is_bright, last_serial);
+		ApplyEffects(left);
+		ApplyEffects(right);
+		return true;
+	}
+
+	bool PeakFrame(CameraFrame& left, CameraFrame& right, bool prefer_bright = false) override {
+		if (!running)
+			return false;
+
+		Image L, R;
+		bool is_bright = false;
+		int64 serial = -1;
+		{
+			Mutex::Lock __(mutex);
+			if (prefer_bright && !bg_left_bright.IsEmpty()) {
+				L = bg_left_bright; R = bg_right_bright;
+				is_bright = true; serial = bg_serial_bright;
+			} else if (!bg_left_dark.IsEmpty() && bg_serial_dark > bg_serial_bright) {
+				L = bg_left_dark; R = bg_right_dark;
+				is_bright = false; serial = bg_serial_dark;
+			} else if (!bg_left_bright.IsEmpty()) {
+				L = bg_left_bright; R = bg_right_bright;
+				is_bright = true; serial = bg_serial_bright;
+			} else return false;
+		}
+
+		FillFrame(left, L, is_bright, serial);
+		FillFrame(right, R, is_bright, serial);
+		ApplyEffects(left);
+		ApplyEffects(right);
+		return true;
+	}
+
+	void SetVerbose(bool v) override {
+		verbose = v;
+		if (cam)
+			cam->SetVerbose(verbose);
+	}
+
+	bool SupportsBrightDark() const override { return true; }
+
+	bool SetOption(const String& key, int value) override {
+		if (!cam)
+			return false;
+		if (key == "async_buffers") {
+			cam->SetAsyncBuffers(value);
+			return true;
+		}
+		if (key == "transfer_timeout_ms") {
+			cam->SetTransferTimeoutMs(value);
+			return true;
+		}
+		return false;
+	}
+
+	void GetStatsMap(VectorMap<String, String>& out) override {
+		if (!cam)
+			return;
+		HMD::CameraStats cs = cam->GetStats();
+		out.Add("Cam Frame Count", IntStr(cs.frame_count));
+		out.Add("Cam Bright Frames", IntStr(cs.bright_frames));
+		out.Add("Cam Dark Frames", IntStr(cs.dark_frames));
+		out.Add("Cam Bright Balance", IntStr(cs.bright_balance));
+		out.Add("Cam Last Exposure", IntStr(cs.last_exposure));
+		out.Add("Cam Last Transferred", IntStr(cs.last_transferred));
+		out.Add("Cam Min/Max Transferred", Format("%d / %d", cs.min_transferred, cs.max_transferred));
+		out.Add("Cam Last Error (r)", IntStr(cs.last_r));
+		out.Add("Cam Mutex Fails", IntStr(cs.mutex_fails));
+		out.Add("Cam USB Errors", IntStr(cs.usb_errors));
+		out.Add("Cam Timeout Errors", IntStr(cs.timeout_errors));
+		out.Add("Cam Overflow Errors", IntStr(cs.overflow_errors));
+		out.Add("Cam Skips", IntStr(cs.other_errors));
+		out.Add("Cam No-Device Errors", IntStr(cs.no_device_errors));
+		out.Add("Cam Resubmit Fails", IntStr(cs.resubmit_failures));
+		out.Add("Cam Resubmit Skips", IntStr(cs.resubmit_skips));
+		out.Add("Cam Halt Clears", Format("%d / %d", cs.halt_clear_attempts, cs.halt_clear_failures));
+		out.Add("Cam Async Buffers", IntStr(cs.async_buffers));
+		out.Add("Cam Timeout (ms)", IntStr(cs.transfer_timeout_ms));
+		out.Add("Cam Handle (usecs)", IntStr(cs.handle_usecs));
+		out.Add("Cam Avg Brightness", Format("%.2f", cs.avg_brightness));
+		out.Add("Cam Pixel Range", Format("%d - %d", (int)cs.min_pixel, (int)cs.max_pixel));
+		static const char* status_names[] = {
+			"COMPLETED", "ERROR", "TIMED_OUT", "CANCELLED", "STALL", "NO_DEVICE", "OVERFLOW"
+		};
+		const int status_name_count = (int)(sizeof(status_names) / sizeof(status_names[0]));
+		String status_line;
+		for (int i = 0; i <= LIBUSB_TRANSFER_OVERFLOW; i++) {
+			if (i)
+				status_line << ", ";
+			if (i < status_name_count)
+				status_line << status_names[i] << "=" << cs.status_counts[i];
+			else
+				status_line << i << "=" << cs.status_counts[i];
+		}
+		out.Add("Cam Status Counts", status_line);
+	}
+
+private:
+	void BackgroundProcess() {
+		while (!quit) {
+			sys.UpdateData();
+			if (cam && cam->IsOpen()) {
+				Vector<HMD::CameraFrame> frames;
+				cam->PopFrames(frames);
+				if (frames.IsEmpty()) {
+					Sleep(1);
+					continue;
+				}
+				for (const auto& f : frames) {
+					Image L, R;
+					if (SplitStereoImage(f.img, L, R)) {
+						Mutex::Lock __(mutex);
+						if (f.is_bright) {
+							bg_left_bright = L;
+							bg_right_bright = R;
+							bg_serial_bright = f.serial;
+						} else {
+							bg_left_dark = L;
+							bg_right_dark = R;
+							bg_serial_dark = f.serial;
+						}
+					}
+				}
+			} else {
+				Sleep(10);
+			}
+		}
+	}
+
+	static void FillFrame(CameraFrame& dst, const Image& img, bool is_bright, int64 serial_id) {
+		dst.img = img;
+		dst.size = img.GetSize();
+		dst.timestamp_us = usecs();
+		dst.format = VID_PIX_RGBA8;
+		dst.is_bright = is_bright;
+		dst.serial = serial_id;
+	}
+};
+
+One<StereoSource> CreateHmdStereoSource() {
+	return MakeOne<HmdStereoSource>();
+}
+
+struct HmdStereoSourceReg {
+	HmdStereoSourceReg() {
+		RegisterStereoSource("hmd", "HMD Stereo Camera", CreateHmdStereoSource, 100);
+	}
+};
+
+HmdStereoSourceReg s_hmd_stereo_reg;
+
+}
+
+END_UPP_NAMESPACE

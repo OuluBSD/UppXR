@@ -1,0 +1,13 @@
+uses
+	Core,
+	Geometry,
+	SoftPhys,
+	SoftHMD,
+	SoftRend,
+	VirtualGui3D;
+
+file
+	main.cpp;
+
+mainconfig
+	"" = "";

@@ -1,0 +1,40 @@
+description "SoftGraphics: Virtual graphics device with typed Python shaders";
+
+uses
+	Core,
+	Core/TextParsing,
+	ByteVM/Python,
+	Geometry,
+	Draw/Extensions;
+
+file
+	AGENTS.md,
+	SoftGraphics.h,
+	Device.h,
+	Device.cpp,
+	Instance.h,
+	Instance.cpp,
+	Surface.h,
+	Surface.cpp,
+	Buffer.h,
+	Buffer.cpp,
+	Texture.h,
+	Texture.cpp,
+	Shader.h,
+	Shader.cpp,
+	Pipeline.h,
+	Pipeline.cpp,
+	Framebuffer.h,
+	Framebuffer.cpp,
+	CommandBuffer.h,
+	CommandBuffer.cpp,
+	ShaderIR.h,
+	ShaderIR.cpp,
+	ShaderTranspiler.h,
+	ShaderTranspiler.cpp,
+	CpuBackend.h,
+	CpuBackend.cpp;
+
+mainconfig
+	"" = "";
+	"flagMAIN CONSOLE_APP_MAIN" = "flagMAIN";

@@ -1,0 +1,11 @@
+description "XRClient reusable headset calibration package";
+
+uses
+	Core,
+	CtrlLib,
+	Docking;
+
+file
+	AGENTS.md,
+	XRClient.h,
+	XRClient.cpp;

@@ -1,0 +1,12 @@
+description "XRServer Android XR Server";
+
+file
+    AGENTS.md,
+    AndroidManifest.xml,
+    XRServer.java,
+    XrPose.java,
+    XrScene.java,
+    XrRenderer.java,
+    CameraController.java,
+    WindowManager.java,
+    TestCube.java;

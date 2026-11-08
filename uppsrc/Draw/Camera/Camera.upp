@@ -1,0 +1,24 @@
+file
+	AGENTS.md,
+	Camera.h,
+	CameraTypes.h,
+	CameraBackend.h,
+	CameraOverlay.h,
+	CameraEffects.h,
+	V4L2Capture.h,
+	V4L2Capture.cpp,
+	V4L2DeviceManager.h,
+	V4L2DeviceManager.cpp,
+	StereoSource.h,
+	StereoSource.cpp,
+	UsbStereoSource.cpp,
+	StereoPreviewCore.h,
+	StereoPreviewCore.cpp,
+	CameraCalibration.h,
+	CameraCalibration.cpp;
+
+uses
+	Core,
+	Draw,
+	Draw/Video,
+	Geometry;
