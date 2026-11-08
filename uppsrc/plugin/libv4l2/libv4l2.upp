@@ -1,6 +1,6 @@
 description "\37728,170,255";
 
-library
+library(LINUX)
 	v4l2;
 
 file

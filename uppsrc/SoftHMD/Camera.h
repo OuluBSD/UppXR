@@ -1,9 +1,75 @@
 #ifndef _SoftHMD_Camera_h_
 #define _SoftHMD_Camera_h_
 
-extern "C" {
-#include <libusb-1.0/libusb.h>
-}
+#if __has_include(<libusb-1.0/libusb.h>)
+	extern "C" {
+	#include <libusb-1.0/libusb.h>
+	}
+#elif __has_include(<libusb.h>)
+	extern "C" {
+	#include <libusb.h>
+	}
+#else
+	#if defined(_WIN32)
+		#include <winsock2.h>
+		#ifndef LIBUSB_CALL
+			#define LIBUSB_CALL __stdcall
+		#endif
+	#else
+		#include <sys/time.h>
+		#ifndef LIBUSB_CALL
+			#define LIBUSB_CALL
+		#endif
+	#endif
+	struct libusb_context;
+	struct libusb_device_handle;
+	struct libusb_transfer;
+	typedef struct libusb_context libusb_context;
+	typedef struct libusb_device_handle libusb_device_handle;
+	typedef void (LIBUSB_CALL *libusb_transfer_cb_fn)(struct libusb_transfer *transfer);
+	struct libusb_transfer {
+		libusb_device_handle *dev_handle;
+		uint8_t flags;
+		unsigned char endpoint;
+		unsigned char type;
+		unsigned int timeout;
+		int status;
+		int length;
+		int actual_length;
+		libusb_transfer_cb_fn callback;
+		void *user_data;
+		unsigned char *buffer;
+		int num_iso_packets;
+	};
+	inline int libusb_init(libusb_context **) { return -1; }
+	inline void libusb_exit(libusb_context *) {}
+	inline libusb_device_handle *libusb_open_device_with_vid_pid(libusb_context *, uint16_t, uint16_t) { return nullptr; }
+	inline void libusb_close(libusb_device_handle *) {}
+	inline int libusb_detach_kernel_driver(libusb_device_handle *, int) { return -1; }
+	inline int libusb_claim_interface(libusb_device_handle *, int) { return -1; }
+	inline int libusb_release_interface(libusb_device_handle *, int) { return -1; }
+	inline int libusb_attach_kernel_driver(libusb_device_handle *, int) { return -1; }
+	inline int libusb_set_interface_alt_setting(libusb_device_handle *, int, int) { return -1; }
+	inline int libusb_clear_halt(libusb_device_handle *, unsigned char) { return -1; }
+	inline int libusb_bulk_transfer(libusb_device_handle *, unsigned char, unsigned char *, int, int *, unsigned int) { return -1; }
+	inline const char *libusb_error_name(int) { return "LIBUSB_NOT_AVAILABLE"; }
+	inline struct libusb_transfer *libusb_alloc_transfer(int) { return nullptr; }
+	inline void libusb_free_transfer(struct libusb_transfer *) {}
+	inline int libusb_submit_transfer(struct libusb_transfer *) { return -1; }
+	inline int libusb_cancel_transfer(struct libusb_transfer *) { return -1; }
+	inline void libusb_fill_bulk_transfer(struct libusb_transfer *xfer, libusb_device_handle *dev, unsigned char ep, unsigned char *buf, int len, libusb_transfer_cb_fn cb, void *user_data, unsigned int timeout) {
+		if (xfer) {
+			xfer->dev_handle = dev;
+			xfer->endpoint = ep;
+			xfer->buffer = buf;
+			xfer->length = len;
+			xfer->callback = cb;
+			xfer->user_data = user_data;
+			xfer->timeout = timeout;
+		}
+	}
+	inline int libusb_handle_events_timeout_completed(libusb_context *, struct timeval *, int *) { return -1; }
+#endif
 #include <vector>
 #include <atomic>
 

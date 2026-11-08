@@ -11,4 +11,4 @@ uses
 	Draw,
 	plugin/jpg;
 
-uses(POSIX) plugin/libv4l2;
+uses(LINUX) plugin/libv4l2;

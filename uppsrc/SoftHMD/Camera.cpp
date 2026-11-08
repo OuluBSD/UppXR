@@ -1,7 +1,6 @@
 #include "SoftHMD.h"
 #include "Camera.h"
 #include <Core/Core.h>
-#include <libusb-1.0/libusb.h>
 
 NAMESPACE_HMD_BEGIN
 
