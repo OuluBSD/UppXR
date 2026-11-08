@@ -21,18 +21,18 @@ typedef struct {
 	MotionControllerPacket sensor;
 } ControllerPrivateData;
 
-static void vec3f_from_controller_gyro(int32_t in_vec[3], vec3& out_vec)
+static void vec3f_from_controller_gyro(const int32 in_vec[3], vec3& out_vec)
 {
-	out_vec[0] = (float)in_vec[0] * 1e-5; // FIXME, this is just a crude guess
-	out_vec[1] = (float)in_vec[2] * 1e-5;
-	out_vec[2] = (float)in_vec[1] * -1e-5;
+	out_vec[0] = (float)in_vec[0] * 1e-5f; // FIXME, this is just a crude guess
+	out_vec[1] = (float)in_vec[2] * 1e-5f;
+	out_vec[2] = (float)in_vec[1] * -1e-5f;
 }
 
-static void vec3f_from_controller_accel(int32_t in_vec[3], vec3& out_vec)
+static void vec3f_from_controller_accel(const int32 in_vec[3], vec3& out_vec)
 {
-	out_vec[0] = (float)in_vec[0] * (9.80665 * 2e-6); // 2 µg per LSB
-	out_vec[1] = (float)in_vec[2] * (9.80665 * 2e-6);
-	out_vec[2] = (float)in_vec[1] * (-9.80665 * 2e-6);
+	out_vec[0] = (float)in_vec[0] * (float)(9.80665 * 2e-6); // 2 µg per LSB
+	out_vec[1] = (float)in_vec[2] * (float)(9.80665 * 2e-6);
+	out_vec[2] = (float)in_vec[1] * (float)(-9.80665 * 2e-6);
 }
 
 static void HandleControllerSensorMsg(ControllerPrivateData* priv, unsigned char* buffer, int size)
