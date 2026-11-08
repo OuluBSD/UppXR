@@ -6,17 +6,15 @@ NAMESPACE_HMD_BEGIN
 
 
 #ifdef _WIN32
-	#ifdef DLL_EXPORT
+	#if defined(DLL_EXPORT)
 		#define HMD_APIENTRY __cdecl
 		#define HMD_APIENTRYDLL __declspec( dllexport )
+	#elif defined(flagDLL) && !defined(HMD_STATIC)
+		#define HMD_APIENTRY __cdecl
+		#define HMD_APIENTRYDLL __declspec( dllimport )
 	#else
-		#ifdef HMD_STATIC
-			#define HMD_APIENTRY __cdecl
-			#define HMD_APIENTRYDLL
-		#else
-			#define HMD_APIENTRY __cdecl
-			#define HMD_APIENTRYDLL __declspec( dllimport )
-		#endif
+		#define HMD_APIENTRY __cdecl
+		#define HMD_APIENTRYDLL
 	#endif
 #else
 	#define HMD_APIENTRY

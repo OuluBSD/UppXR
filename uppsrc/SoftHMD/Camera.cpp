@@ -26,6 +26,25 @@ NAMESPACE_HMD_BEGIN
 #define CpuToLE16(x) (SwapEndian(x))
 #endif
 
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+struct hololens_camera2_command {
+	uint32 magic;
+	uint32 len;
+	uint32 command;
+};
+
+struct hololens_camera2_unknown_command {
+	uint32 magic;
+	uint32 len;
+	uint16 command;
+	uint16 camera; /* 0 for left, 1 for right */
+	uint16 unknown_6000;
+	uint16 gain; /* observed 82 to 255 */
+	uint16 second_camera; /* same as camera */
+};
+#pragma pack(pop)
+#else
 struct hololens_camera2_command {
 	uint32 magic;
 	uint32 len;
@@ -41,6 +60,7 @@ struct hololens_camera2_unknown_command {
 	uint16 gain; /* observed 82 to 255 */
 	uint16 second_camera; /* same as camera */
 } __attribute__((packed));
+#endif
 
 static int wmr_camera_send(libusb_device_handle* usb_handle, void *buf, size_t len)
 {
@@ -262,12 +282,12 @@ bool HMD_APIENTRYDLL Camera::Open()
 	libusb_clear_halt(usb_handle, WMR_VIDEO_ENDPOINT);
 	
 	wmr_camera_set_active(usb_handle, false);
-	Upp::Sleep(200);
+	Upp::Thread::Sleep(200);
 	wmr_camera_set_active(usb_handle, true);
-	Upp::Sleep(200);
+	Upp::Thread::Sleep(200);
 	wmr_camera_set_gain(usb_handle, 0, 0x80);
 	wmr_camera_set_gain(usb_handle, 1, 0x80);
-	Upp::Sleep(100);
+	Upp::Thread::Sleep(100);
 	
 	int effective_timeout_ms = transfer_timeout_ms;
 	if(effective_timeout_ms <= 0)
@@ -316,7 +336,7 @@ void HMD_APIENTRYDLL Camera::Close()
 	// usb_thread will keep calling libusb_handle_events until all transfers are reaped
 	int attempts = 0;
 	while(active_transfers > 0 && attempts < 500) {
-		Upp::Sleep(10);
+		Upp::Thread::Sleep(10);
 		attempts++;
 	}
 	
@@ -369,7 +389,7 @@ void Camera::Process()
 				if(stats.usb_errors > last_errors + 20) {
 					if(verbose) Cout() << "USB: High error rate detected (" << (stats.usb_errors - last_errors) << " eps), restarting camera...\n";
 					wmr_camera_set_active(usb_handle, false);
-					Upp::Sleep(100);
+					Upp::Thread::Sleep(100);
 					wmr_camera_set_active(usb_handle, true);
 					gap_occurred = true;
 				}
@@ -385,7 +405,7 @@ void Camera::ProcessFrames()
 {
 	while(process_flag.IsRunning() && !stopping) {
 		if(!ProcessRawFrames())
-			Upp::Sleep(1);
+			Upp::Thread::Sleep(1);
 	}
 	process_flag.SetStopped();
 }
