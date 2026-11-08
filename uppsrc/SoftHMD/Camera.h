@@ -21,6 +21,15 @@
 			#define LIBUSB_CALL
 		#endif
 	#endif
+	enum libusb_transfer_status {
+		LIBUSB_TRANSFER_COMPLETED,
+		LIBUSB_TRANSFER_ERROR,
+		LIBUSB_TRANSFER_TIMED_OUT,
+		LIBUSB_TRANSFER_CANCELLED,
+		LIBUSB_TRANSFER_STALL,
+		LIBUSB_TRANSFER_NO_DEVICE,
+		LIBUSB_TRANSFER_OVERFLOW,
+	};
 	struct libusb_context;
 	struct libusb_device_handle;
 	struct libusb_transfer;

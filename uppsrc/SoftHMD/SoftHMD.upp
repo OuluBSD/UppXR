@@ -12,6 +12,7 @@ pkg_config(LINUX USBONLY) "hidapi-libusb libusb-1.0";
 pkg_config(LINUX) "hidapi-hidraw libusb-1.0";
 
 library(FREEBSD) hidapi;
+library(OSX) "hidapi usb-1.0";
 
 file
 	README.md,
