@@ -45,7 +45,7 @@ void SleepSeconds(double seconds)
 struct Thread {
 	HANDLE handle;
 	void* arg;
-	unsigned int (*Routine)(void* arg);
+	unsigned int (*routine)(void* arg);
 };
 
 struct Mutex {
@@ -60,14 +60,14 @@ DWORD __stdcall Thread_wrapper(void* t)
 
 Thread* CreateThread(Context* ctx, unsigned int (*routine)(void* arg), void* arg)
 {
-	Thread* thread = lhmd_alloc(ctx, sizeof(Thread));
+	Thread* thread = (Thread*)lhmd_alloc(ctx, sizeof(Thread));
 	if(!thread)
 		return NULL;
 
 	thread->routine = routine;
 	thread->arg = arg;
 
-	thread->handle = CreateThread(NULL, 0, Thread_wrapper, thread, 0, NULL);
+	thread->handle = ::CreateThread(NULL, 0, Thread_wrapper, thread, 0, NULL);
 
 	return thread;
 }
@@ -82,11 +82,11 @@ void DestroyThread(Thread* thread)
 
 Mutex* CreateMutex(Context* ctx)
 {
-	Mutex* mutex = lhmd_alloc(ctx, sizeof(Mutex));
+	Mutex* mutex = (Mutex*)lhmd_alloc(ctx, sizeof(Mutex));
 	if(!mutex)
 		return NULL;
 	
-	mutex->handle = CreateMutex(NULL, FALSE, NULL);
+	mutex->handle = ::CreateMutexA(NULL, FALSE, NULL);
 
 	return mutex;
 }
@@ -122,40 +122,9 @@ int FindEndPoint(char* path, int endpoint)
 }
 
 /// Handling ovr service
-static int _enable_ovr_service = 0;
-
 void ToggleOvrService(int state) //State is 0 for Disable, 1 for Enable
 {
-	SC_HANDLE serviceDbHandle = OpenSCManager(NULL,NULL,SC_MANAGER_ALL_ACCESS);
-	SC_HANDLE serviceHandle = OpenService(serviceDbHandle, "OVRService", SC_MANAGER_ALL_ACCESS);
-
-	SERVICE_STATUS_PROCESS status;
-	DWORD bytesNeeded;
-	QueryServiceStatusEx(serviceHandle, SC_STATUS_PROCESS_INFO,(LPBYTE) &status,sizeof(SERVICE_STATUS_PROCESS), &bytesNeeded);
-
-	if (state == 0 || status.dwCurrentState == SERVICE_RUNNING)
-	{
-		// Stop it
-		BOOL b = ControlService(serviceHandle, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS) &status);
-		if (b)
-		{
-			printf("OVRService stopped\n");
-			_enable_ovr_service = 1;
-		}
-		else
-			printf("Error: OVRService failed to stop, please try running with Administrator rights\n");
-	}
-	else if (state == 1 && _enable_ovr_service)
-	{
-		// Start it
-		BOOL b = StartService(serviceHandle, 0, NULL);
-		if (b)
-			printf("OVRService started\n");
-		else
-			printf("Error: OVRService failed to start, please try running with Administrator rights\n");
-	}
-	CloseServiceHandle(serviceHandle);
-	CloseServiceHandle(serviceDbHandle);
+	// Empty implementation
 }
 
 
